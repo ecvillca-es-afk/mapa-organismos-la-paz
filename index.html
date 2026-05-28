@@ -45,6 +45,16 @@
     border-bottom: 1px solid #ddd;
     font-size: 13px;
 }
+#filtro-categoria {
+    width: 100%;
+    padding: 8px;
+    box-sizing: border-box;
+    border: none;
+    border-bottom: 2px solid #0D1B2A;
+    font-size: 13px;
+    background: #f5f5f5;
+    cursor: pointer;
+}
 #contadores {
     padding: 8px 12px;
     font-size: 12px;
@@ -149,6 +159,18 @@
 <div id="panel">
     <div id="panel-header">🏛️ Organismos Públicos — La Paz</div>
     <input id="buscador" type="text" placeholder="Buscar institución o sigla..." />
+    <select id="filtro-categoria">
+        <option value="">🗂️ Todas las categorías</option>
+        <option value="Economía y finanzas">💰 Economía y finanzas</option>
+        <option value="Educación y cultura">📚 Educación y cultura</option>
+        <option value="Gobierno y justicia">⚖️ Gobierno y justicia</option>
+        <option value="Instituciones públicas del Estado">🏛️ Instituciones públicas del Estado</option>
+        <option value="Medio ambiente y recursos naturales">🌿 Medio ambiente y recursos naturales</option>
+        <option value="Planificación">📋 Planificación</option>
+        <option value="Producción y desarrollo">🏭 Producción y desarrollo</option>
+        <option value="Salud">🏥 Salud</option>
+        <option value="Servicios y regulación">🔧 Servicios y regulación</option>
+    </select>
     <div id="contadores"></div>
     <div id="lista"></div>
 </div>
@@ -649,18 +671,42 @@ function renderLista(lista) {
     });
 }
 
-function actualizarPanel(filtro) {
+function actualizarPanel(filtroTexto, filtroCategoria) {
+    filtroTexto = filtroTexto || '';
+    filtroCategoria = filtroCategoria || '';
     var filtrados = todosLosOrganismos.filter(function(layer) {
         var p = layer.feature.properties;
         var texto = ((p['nombre_oficial'] || '') + ' ' + (p['sigla'] || '')).toLowerCase();
-        return texto.includes(filtro.toLowerCase());
+        var coincideTexto = texto.includes(filtroTexto.toLowerCase());
+        var coincideCategoria = filtroCategoria === '' || (p['categoria'] || '') === filtroCategoria;
+        return coincideTexto && coincideCategoria;
     });
+
+    // Mostrar u ocultar marcadores en el mapa
+    todosLosOrganismos.forEach(function(layer) {
+        var p = layer.feature.properties;
+        var texto = ((p['nombre_oficial'] || '') + ' ' + (p['sigla'] || '')).toLowerCase();
+        var coincideTexto = texto.includes(filtroTexto.toLowerCase());
+        var coincideCategoria = filtroCategoria === '' || (p['categoria'] || '') === filtroCategoria;
+        if (coincideTexto && coincideCategoria) {
+            if (!map.hasLayer(layer)) map.addLayer(layer);
+        } else {
+            if (map.hasLayer(layer)) map.removeLayer(layer);
+        }
+    });
+
     renderContadores(filtrados);
     renderLista(filtrados);
 }
 
 document.getElementById('buscador').addEventListener('input', function() {
-    actualizarPanel(this.value);
+    var cat = document.getElementById('filtro-categoria').value;
+    actualizarPanel(this.value, cat);
+});
+
+document.getElementById('filtro-categoria').addEventListener('change', function() {
+    var texto = document.getElementById('buscador').value;
+    actualizarPanel(texto, this.value);
 });
 
 // Esperar que los datos carguen y luego inicializar
